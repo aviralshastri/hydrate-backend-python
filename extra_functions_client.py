@@ -200,7 +200,3 @@ def get_products_list(keyword):
     except Exception as e:
         print(f"Error in get_products_list: {e}")
         return []
-
-
-
-print(get_products_list("shirt"))

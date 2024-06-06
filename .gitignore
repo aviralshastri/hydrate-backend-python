@@ -1,3 +1,5 @@
 serviceAccount.json
 
 *.json
+
+*.env

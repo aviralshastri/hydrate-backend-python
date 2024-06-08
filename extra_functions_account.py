@@ -4,8 +4,11 @@ from cryptography.fernet import Fernet
 from dotenv import load_dotenv
 import os
 import base64
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
-# Load environment variables
+#Load environment variable
 load_dotenv()
 
 # Database connection setup
@@ -55,8 +58,9 @@ def verify_account(email, password):
         print(f"Error verifying account: {e}")
         return False
 
+
 # Account creation function
-def create_account(name, email, password, phone_number, dob):
+def create_account(name, email, password, phone_number, dob, gender):
     try:
         def encrypt_password(password):
             password_key = os.getenv("PASSWORD_DECRYPT_KEY")
@@ -68,19 +72,80 @@ def create_account(name, email, password, phone_number, dob):
         def hash_password(password):
             return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
-        def insert_account(name, email, password, phone_number, dob):
+        def insert_account(name, email, password, phone_number, dob,gender):
             try:
                 encrypted_password = encrypt_password(hash_password(password))
-                sql = "INSERT INTO accounts (name, email, password, phone_number, dob) VALUES (%s, %s, %s, %s, %s)"
-                db_cursor.execute(sql, (name, email, encrypted_password, phone_number, dob))
+                sql = "INSERT INTO accounts (name, email, password, phone_number, dob,gender) VALUES (%s, %s, %s, %s, %s, %s)"
+                values = (name, email, encrypted_password, phone_number, dob, gender)
+                db_cursor.execute(sql, values)
                 db.commit()
                 print("Account created successfully!")
+                return True
             except Exception as err:
                 print(f"Error: {err}")
                 db.rollback()
+                return False
 
-        insert_account(name, email, password, phone_number, dob)
-        return True
+        return insert_account(name, email, password, phone_number, dob, gender)
+
     except Exception as e:
         print(f"Error creating account: {e}")
+        return False
+
+
+# Account existsance function
+def account_existence_check(email,phone_number):
+    try:
+        sql = "SELECT * FROM accounts WHERE email = %s"
+        db_cursor.execute(sql, (email,))
+        email_exist = db_cursor.fetchone()
+        sql = "SELECT * FROM accounts WHERE phone_number= %s"
+        db_cursor.execute(sql, (phone_number,))
+        phone_exists = db_cursor.fetchone()
+        
+        if email_exist:
+            return "Email already associated with an account."
+        elif phone_exists:
+            return "Phone Number already associated with an account."
+        else:
+            return False
+        
+    except Exception as e:
+        print(f"Error checking account existance: {e}")
+        return "An error occurred while checking account existance."
+    
+# Email OTP verification function    
+def email_otp_verification(OTP,email):
+    try:
+        def send_otp_email(OTP, email):
+            sender_email = 'otpbot01@gmail.com'
+            password = os.getenv("EMAIL_PASSWORD_KEY")
+            template_file = 'email_otp_template.html'
+            with open(template_file, 'r') as file:
+                email_body = file.read()
+
+            email_body = email_body.replace('{otp}', OTP)
+
+            msg = MIMEMultipart()
+            msg['From'] = sender_email
+            msg['To'] = OTP
+            msg['Subject'] = 'Hydrate eCommerce OTP Verification.'
+
+            msg.attach(MIMEText(email_body, 'html'))
+            try:
+                server = smtplib.SMTP('smtp.gmail.com', 587)  # Gmail SMTP server and port
+                server.starttls()  # Start TLS encryption
+                server.login(sender_email, password)  # Login with Gmail email and password
+                server.sendmail(sender_email, email, msg.as_string())  # Send email
+                print('OTP sent successfully!')
+                return True
+            except Exception as e:
+                print(f'Error: {e}')
+                return False
+            finally:
+                server.quit()
+        return send_otp_email(OTP,email)
+
+    except Exception as e:
+        print(f"Error sending OTP: {e}")
         return False

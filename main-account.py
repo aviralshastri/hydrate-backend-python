@@ -1,9 +1,9 @@
 from flask import Flask, request, jsonify
-from extra_functions_account import verify_account, create_account
+from extra_functions_account import verify_account, create_account, account_existence_check,email_otp_verification
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "http://192.168.1.9:3000"}})
+CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 
 @app.route('/verify_account', methods=['POST'])
 def verify():
@@ -24,14 +24,42 @@ def create():
     password = data.get('password')
     phone_number = data.get('phone_number')
     dob = data.get('dob')
-    if not email or not password or not phone_number:
-        return jsonify({'error': 'Email, password, and phone_number are required'}), 400
+    gender = data.get('gender')
+    if not email or not password or not phone_number or not dob or not gender:
+        return jsonify({'error': 'Email, password,dob,gender and phone number are required'}), 400
     
-    success = create_account(name,email, password, phone_number,dob)
+    success = create_account(name,email, password, phone_number,dob,gender)
     if success:
         return jsonify({'created': success})
     else:
         return jsonify({'error': 'Failed to create account'}), 500
+    
+@app.route('/account_existence_check', methods=['POST'])
+def account_existance():
+    data = request.get_json()
+    email = data.get('email')
+    phone_number = data.get('phone_number')
+    if not email or not phone_number:
+        return jsonify({'error': 'Email and phone number is required'}), 400
+    exist = account_existence_check(email, phone_number)
+    if exist == False or exist == 'Email already associated with an account.' or exist == "Phone Number already associated with an account.":
+        return jsonify({'existance': exist})
+    else:
+        return jsonify({'error': 'Failed to check account existance'}), 500
+
+@app.route('/email_verification', methods=['POST'])
+def email_verification():
+    data = request.get_json()
+    email = data.get('email')
+    OTP = data.get('otp')
+    if not email or not OTP:
+        return jsonify({'error': 'Email and phone number is required'}), 400
+    otp_sent = email_otp_verification(OTP,email)
+    if otp_sent:
+        return jsonify({'status': 'OTP sent'})
+    else:
+        return jsonify({'status': 'An error occured while sending otp'}), 500
+    
 
 if __name__ == '__main__':
-    app.run(host='192.168.1.9', port=9000, debug=True)
+    app.run(host='192.168.1.9', port=9000)

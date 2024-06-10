@@ -3,3 +3,5 @@ serviceAccount.json
 *.json
 
 *.env
+
+*.pem

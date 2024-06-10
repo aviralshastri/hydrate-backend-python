@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from extra_functions_account import verify_account, create_account, account_existence_check,email_otp_verification
+from extra_functions_account import verify_account, create_account, account_existence_check,email_otp_verification, generate_jwt_token
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -59,7 +59,16 @@ def email_verification():
         return jsonify({'status': 'OTP sent'})
     else:
         return jsonify({'status': 'An error occured while sending otp'}), 500
-    
+
+@app.route('/get_jwt_token', methods=['GET'])
+def get_jwt_token():
+    token= generate_jwt_token()
+    if token:
+        return jsonify({'token': token})
+    else:
+        return jsonify({'error': 'An error occured while tokenizing account.'}), 500
+
+
 
 if __name__ == '__main__':
-    app.run(host='192.168.1.9', port=9000)
+    app.run(debug=True,port=9000)

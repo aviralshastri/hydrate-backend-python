@@ -4,7 +4,7 @@ from cryptography.fernet import Fernet
 import os
 from dotenv import load_dotenv
 import jwt
-import datetime
+from datetime import datetime, timedelta
 import base64
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -150,17 +150,75 @@ def account_existence_check(email,phone_number):
         return "An error occurred while checking account existance."
     
     
-# Email OTP verification function    
+# Email OTP verification function
+
+email_template='''
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>OTP Email Template</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .card {
+            border-color: #F7F7F7;
+            background-color: black;
+            border-radius: 20px;
+            color: white;
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .otp {
+            font-size: 40px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+
+        .logo {
+            border-radius: 20px;
+            width: 140px;
+            margin-bottom: 20px;
+            filter: invert(1);
+	    border:solid;
+            border-color:white;
+            
+        }
+        .heading{
+           font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <img class="logo" src="https://drive.google.com/uc?export=download&id=15RYokbtZEKkAq0guPqW1K30QpIwV0f7l" alt="Logo">
+        <h2 class='heading'>Your Account Verification OTP</h2>
+        <p class="otp">{otp}</p>
+    </div>
+</body>
+</html>
+'''
 def email_otp_verification(OTP,email):
     try:
         def send_otp_email(OTP, email):
             sender_email = 'otpbot01@gmail.com'
             password = os.getenv("EMAIL_PASSWORD_KEY")
-            template_file = 'email_otp_template.html'
-            with open(template_file, 'r') as file:
-                email_body = file.read()
-
-            email_body = email_body.replace('{otp}', OTP)
+            email_body = email_template.replace('{otp}', OTP)
 
             msg = MIMEMultipart()
             msg['From'] = sender_email
@@ -187,29 +245,4 @@ def email_otp_verification(OTP,email):
         return False
 
 
-# Generate JWT token function
-def generate_jwt_token():
-    SECRET_KEY = os.getenv('JWT_KEY')
-    try:
-        payload = {
-            'username': 'testuser',
-            'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=30)
-        }
-        token = jwt.encode(payload, SECRET_KEY, algorithm='HS256')
-        return token
-    except Exception as e:
-        print(f"Error generating token: {e}")
-        return {'error': 'Failed to generate token'}
 
-def verify_jwt_token(token):
-    try:
-        secret_key = os.getenv('JWT_KEY')
-        jwt.decode(token, secret_key, algorithms=['HS256'])
-        return True
-    except jwt.ExpiredSignatureError:
-        return False
-    except jwt.InvalidTokenError:
-        return False
-    except Exception as e:
-        print(f"Error verifying JWT token: {e}")
-        return False
